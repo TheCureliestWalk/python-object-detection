@@ -3,9 +3,9 @@ import numpy as np
 import imutils
 import time
 from PIL import Image
-
 # Include custom data
 from data import classes as classes
+from data import tracker
 
 
 # Constants.
@@ -28,6 +28,7 @@ RED = (0, 0, 255)
 GREEN = (0, 255, 0)
 
 classes = list(classes.classes_dict.values())
+tracker = tracker.EuclideanDistTracker()
 
 detection_save_dir = "saved_pic"
 
@@ -102,6 +103,8 @@ def post_process(input_image, outputs):
 
                 box = np.array([left, top, width, height])
                 boxes.append(box)
+                
+                
 
     # Perform non maximum suppression to eliminate redundant overlapping boxes with
     # lower confidences.
@@ -113,11 +116,17 @@ def post_process(input_image, outputs):
         top = box[1]
         width = box[2]
         height = box[3]
-        cv2.rectangle(input_image, (left, top),
-                      (left + width, top + height), GREEN, 2*THICKNESS)
+        cv2.rectangle(input_image, (left, top), (left + width, top + height), GREEN, 2*THICKNESS)
         label = "{}:{:.2f}".format(classes[class_ids[i]], confidences[i])
         draw_label(input_image, label, left, top)
-
+        
+        # Object tracking
+        boxes_id = tracker.update(boxes)
+        for box_id in boxes_id:
+            left, top, width, height, id = box_id
+            #cv2.putText(input_image, str(id), (left, top-15), FONT_FACE , FONT_SCALE, YELLOW, THICKNESS)
+            draw_label(input_image, str(id), left-15, top)
+            
     return input_image
 
 def savePic(img):
@@ -129,29 +138,39 @@ def savePic(img):
 
 if __name__ == '__main__':
 
-    cap = cv2.VideoCapture("vid/211212_02_Jakarta_4k_018.mp4")
-
+    #cap = cv2.VideoCapture("vid/211212_02_Jakarta_4k_018.mp4")
+    cap = cv2.VideoCapture("rtsp://prawee:1q2w3e4r@10.88.97.100:554/cam/realmonitor?channel=6&subtype=0")
+    
+    # Seek to ast frame from rtsp
+    ct = 0
     while True:
-     rect, frame = cap.read()
-
-     frame = imutils.resize(frame, height=640)
-
-     net = cv2.dnn.readNet("data/yolov5s.onnx")
-     detections = pre_process(frame, net)
-     img = post_process(frame.copy(), detections)
-     t, _ = net.getPerfProfile()
-     label = 'Inference time: %.2f ms' % (t * 1000.0 / cv2.getTickFrequency())
-     print(label)
-     cv2.putText(img, label, (20, 40), FONT_FACE,
-                 FONT_SCALE, RED, THICKNESS, cv2.LINE_AA)
-     cv2.imshow('Detection', img)
+        ct += 1
+        rect = cap.grab()
+        if ct % 5 == 0:
+            rect, frame = cap.retrieve()
+            frame = imutils.resize(frame, height=640)
+            net = cv2.dnn.readNet("data/yolov5s.onnx")
+            detections = pre_process(frame, net)
+            img = post_process(frame.copy(), detections)
+            t, _ = net.getPerfProfile()
+            label = 'Inference time: %.2f ms' % (t * 1000.0 / cv2.getTickFrequency())
+            print(label)
      
-     # Uncomment to save pic
-     # savePic(img)
+        # Draw line
+            cv2.line(img, [355, 360], [738, 360], RED, 2*THICKNESS)
+            cv2.line(img, [192, 613], [970, 613], RED, 2*THICKNESS)
+     
+            cv2.putText(img, label, (20, 40), FONT_FACE, FONT_SCALE, RED, THICKNESS, cv2.LINE_AA)
+            cv2.imshow('Detection', img)
+     
+            # Uncomment to save pic
+            # savePic(img)
     
 
-     if cv2.waitKey(30) == ord('q'):
-         break
+        if cv2.waitKey(30) == ord('q'):
+            break
+            
+     
 
 cap.release()
 cv2.destroyAllWindows()
