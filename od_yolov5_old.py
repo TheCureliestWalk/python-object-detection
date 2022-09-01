@@ -11,15 +11,15 @@ CONFIDENCE_THRESHOLD = 0.45
 
 # Text parameters.
 FONT_FACE = cv2.FONT_HERSHEY_SIMPLEX
-FONT_SCALE = 0.7
+FONT_SCALE = 0.5
 THICKNESS = 1
 
-# Colors
+# Colors in B G R
 BLACK = (0, 0, 0)
 BLUE = (255, 178, 50)
 YELLOW = (0, 255, 255)
 RED = (0, 0, 255)
-
+GREEN = (0, 255, 0)
 
 def draw_label(input_image, label, left, top):
     """Draw text onto image at location."""
@@ -30,7 +30,7 @@ def draw_label(input_image, label, left, top):
     # Use text size to create a BLACK rectangle.
     cv2.rectangle(input_image, (left, top),
                   (left + dim[0], top + dim[1] + baseline), BLACK, cv2.FILLED)
-    # Display text inside the rectangle.
+    # Display text inside the rectangle and convert to %
     cv2.putText(input_image, label, (left, top +
                 dim[1]), FONT_FACE, FONT_SCALE, YELLOW, THICKNESS, cv2.LINE_AA)
 
@@ -104,7 +104,7 @@ def post_process(input_image, outputs):
         width = box[2]
         height = box[3]
         cv2.rectangle(input_image, (left, top),
-                      (left + width, top + height), BLUE, 3*THICKNESS)
+                      (left + width, top + height), GREEN, 2*THICKNESS)
         label = "{}:{:.2f}".format(classes[class_ids[i]], confidences[i])
         draw_label(input_image, label, left, top)
 
@@ -206,7 +206,7 @@ if __name__ == '__main__':
      
      frame = imutils.resize(frame, height=640)
     
-     net = cv2.dnn.readNet("yolov5s.onnx")
+     net = cv2.dnn.readNet("data/yolov5s.onnx")
      detections = pre_process(frame, net)
      img = post_process(frame.copy(), detections)
      t, _ = net.getPerfProfile()
@@ -214,8 +214,8 @@ if __name__ == '__main__':
      print(label)
      cv2.putText(img, label, (20, 40), FONT_FACE,
                  FONT_SCALE, RED, THICKNESS, cv2.LINE_AA)
-     cv2.imshow('Output', img)
-     if cv2.waitKey(27) == ord('q'):
+     cv2.imshow('Detection', img)
+     if cv2.waitKey(30) == ord('q'):
          break
 
 cap.release()

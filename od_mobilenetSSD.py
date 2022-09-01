@@ -33,12 +33,12 @@ if use_gpu:
 print(f'[INFO] OpenCV {cv2.__version__}')
 print("[INFO] Reading Streaming video")
 
-vs = cv2.VideoCapture('vid/highway.mp4')
+vs = cv2.VideoCapture('vid/211212_02_Jakarta_4k_018.mp4')
 
 while True:
     rect, frame = vs.read()
     if rect == True:
-        frame = imutils.resize(frame, height=300)
+        frame = imutils.resize(frame, height=640)
         (h, w) = frame.shape[:2]
         blob = cv2.dnn.blobFromImage(frame, 0.007843, (300, 300), (127.5, 127.5, 127.5))
         # Predict

@@ -1,6 +1,12 @@
 import cv2
 import numpy as np
 import imutils
+import time
+from PIL import Image
+
+# Include custom data
+from data import classes as classes
+
 
 # Constants.
 INPUT_WIDTH = 640
@@ -11,15 +17,19 @@ CONFIDENCE_THRESHOLD = 0.45
 
 # Text parameters.
 FONT_FACE = cv2.FONT_HERSHEY_SIMPLEX
-FONT_SCALE = 0.7
+FONT_SCALE = 0.5
 THICKNESS = 1
 
-# Colors
+# Colors in B G R
 BLACK = (0, 0, 0)
 BLUE = (255, 178, 50)
 YELLOW = (0, 255, 255)
 RED = (0, 0, 255)
+GREEN = (0, 255, 0)
 
+classes = list(classes.classes_dict.values())
+
+detection_save_dir = "saved_pic"
 
 def draw_label(input_image, label, left, top):
     """Draw text onto image at location."""
@@ -30,7 +40,7 @@ def draw_label(input_image, label, left, top):
     # Use text size to create a BLACK rectangle.
     cv2.rectangle(input_image, (left, top),
                   (left + dim[0], top + dim[1] + baseline), BLACK, cv2.FILLED)
-    # Display text inside the rectangle.
+    # Display text inside the rectangle and convert to %
     cv2.putText(input_image, label, (left, top +
                 dim[1]), FONT_FACE, FONT_SCALE, YELLOW, THICKNESS, cv2.LINE_AA)
 
@@ -104,21 +114,29 @@ def post_process(input_image, outputs):
         width = box[2]
         height = box[3]
         cv2.rectangle(input_image, (left, top),
-                      (left + width, top + height), BLUE, 3*THICKNESS)
+                      (left + width, top + height), GREEN, 2*THICKNESS)
         label = "{}:{:.2f}".format(classes[class_ids[i]], confidences[i])
         draw_label(input_image, label, left, top)
 
     return input_image
 
+def savePic(img):
+    # Get current time for file name
+    currentTime = time.strftime("D-%d-%m-%Y-T-%HH-%MM-%SS")
+    # Save pic
+    getImg = Image.fromarray(img)
+    getImg.save(detection_save_dir + "/" + currentTime + ".jpg")
 
 if __name__ == '__main__':
-    # Load class names.
-    cap = cv2.VideoCapture("jakata.mp4")
+
+    cap = cv2.VideoCapture("vid/211212_02_Jakarta_4k_018.mp4")
+
     while True:
      rect, frame = cap.read()
+
      frame = imutils.resize(frame, height=640)
-     modelWeights = "yolov5s.onnx"
-     net = cv2.dnn.readNet(modelWeights)
+
+     net = cv2.dnn.readNet("data/yolov5s.onnx")
      detections = pre_process(frame, net)
      img = post_process(frame.copy(), detections)
      t, _ = net.getPerfProfile()
@@ -126,9 +144,14 @@ if __name__ == '__main__':
      print(label)
      cv2.putText(img, label, (20, 40), FONT_FACE,
                  FONT_SCALE, RED, THICKNESS, cv2.LINE_AA)
-     cv2.imshow('Output', img)
-     if cv2.waitKey(27) == ord('q'):
-         break
+     cv2.imshow('Detection', img)
      
+     # Uncomment to save pic
+     # savePic(img)
+    
+
+     if cv2.waitKey(30) == ord('q'):
+         break
+
 cap.release()
 cv2.destroyAllWindows()
