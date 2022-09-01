@@ -205,9 +205,8 @@ if __name__ == '__main__':
      rect, frame = cap.read()
      
      frame = imutils.resize(frame, height=640)
-     
-     modelWeights = "yolov5s.onnx"
-     net = cv2.dnn.readNet(modelWeights)
+    
+     net = cv2.dnn.readNet("yolov5s.onnx")
      detections = pre_process(frame, net)
      img = post_process(frame.copy(), detections)
      t, _ = net.getPerfProfile()
