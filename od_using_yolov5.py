@@ -1,10 +1,11 @@
+import os
 import cv2
 import numpy as np
 import imutils
 import time
 from PIL import Image
 # Include custom data
-from data import classes as classes
+from data import custom_classes as classes
 from data import tracker
 
 
@@ -31,7 +32,12 @@ classes = list(classes.classes_dict.values())
 tracker = tracker.EuclideanDistTracker()
 
 detection_save_dir = "saved_pic"
+image_dir = os.path.join('data', 'images')
 
+# Draw Rectangle
+line_pos = [(50, 298), (630, 580)]
+# Detection Area
+detection_area = [(47,265), (559,264), (636,407), (22,391)]
 def draw_label(input_image, label, left, top):
     """Draw text onto image at location."""
 
@@ -104,11 +110,10 @@ def post_process(input_image, outputs):
                 box = np.array([left, top, width, height])
                 boxes.append(box)
                 
-                
-
+            
     # Perform non maximum suppression to eliminate redundant overlapping boxes with
     # lower confidences.
-    indices = cv2.dnn.NMSBoxes(
+        indices = cv2.dnn.NMSBoxes(
         boxes, confidences, CONFIDENCE_THRESHOLD, NMS_THRESHOLD)
     for i in indices:
         box = boxes[i]
@@ -120,7 +125,7 @@ def post_process(input_image, outputs):
         label = "{}:{:.2f}".format(classes[class_ids[i]], confidences[i])
         draw_label(input_image, label, left, top)
         
-        # Object tracking
+        # Object tracking by Iho
         boxes_id = tracker.update(boxes)
         for box_id in boxes_id:
             left, top, width, height, id = box_id
@@ -139,7 +144,9 @@ def savePic(img):
 if __name__ == '__main__':
 
     #cap = cv2.VideoCapture("vid/211212_02_Jakarta_4k_018.mp4")
-    cap = cv2.VideoCapture("rtsp://prawee:1q2w3e4r@10.88.97.100:554/cam/realmonitor?channel=6&subtype=0")
+    #cap = cv2.VideoCapture("rtsp://prawee:1q2w3e4r@10.88.97.100:554/cam/realmonitor?channel=6&subtype=0")
+    cap = cv2.VideoCapture(
+        "rtsp://iho:1q2w3e4r%40iho@10.88.240.172/axis-media/media.amp?videocodec=h264&resolution=640x480") #640x480 default resolution
     
     # Seek to ast frame from rtsp
     ct = 0
@@ -148,8 +155,9 @@ if __name__ == '__main__':
         rect = cap.grab()
         if ct % 5 == 0:
             rect, frame = cap.retrieve()
-            frame = imutils.resize(frame, height=640)
+            #frame = imutils.resize(frame, height=640) // not using this since rtsp can resize itself.
             net = cv2.dnn.readNet("data/yolov5s.onnx")
+            #net = cv2.dnn.readNet("data/custom.onnx")
             detections = pre_process(frame, net)
             img = post_process(frame.copy(), detections)
             t, _ = net.getPerfProfile()
@@ -157,8 +165,7 @@ if __name__ == '__main__':
             print(label)
      
         # Draw line
-            cv2.line(img, [355, 360], [738, 360], RED, 2*THICKNESS)
-            cv2.line(img, [192, 613], [970, 613], RED, 2*THICKNESS)
+            cv2.rectangle(img, line_pos[0], line_pos[1], RED, 2*THICKNESS)
      
             cv2.putText(img, label, (20, 40), FONT_FACE, FONT_SCALE, RED, THICKNESS, cv2.LINE_AA)
             cv2.imshow('Detection', img)
