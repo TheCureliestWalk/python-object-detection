@@ -3,6 +3,11 @@
 This project mainly use for measuring vehicles speed by OpenCV.
 
 ---
+# How to use
+1. ```pip install -r requirements.txt``` for installing required dependencies.
+2. For Windows use ``` venv\Scripts\activate ``` to activate virtual environment.
+3. Run ```python speedDetection.py```
+---
 
 ### To-Do & Plan
 
