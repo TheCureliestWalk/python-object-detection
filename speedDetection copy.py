@@ -11,7 +11,7 @@ from data import tracker
 
 # Change distance according to real path.
 # -------------------------------------------
-realDistance = 20 # in meters
+
 # -------------------------------------------
 
 # Init tracker objects
@@ -30,9 +30,9 @@ model.classes = None
 model.max_det = 1000  # maximum number of detections per image
 model.amp = False  # Automatic Mixed Precision (AMP) inference
 
-cap = cv2.VideoCapture("rtsp://iho:1q2w3e4r%40iho@10.88.240.172/axis-media/media.amp?videocodec=h264&resolution=640x480")
+#cap = cv2.VideoCapture("rtsp://iho:1q2w3e4r%40iho@10.88.240.172/axis-media/media.amp?videocodec=h264&resolution=640x480")
 #cap.set(cv2.CAP_PROP_FPS, 5.0)
-#cap = cv2.VideoCapture("vid/Volkswagen - 7272.mp4")
+cap = cv2.VideoCapture("vid/Volkswagen - 7272.mp4")
 # Variables
 COLOR_RED = (0, 0, 255)
 COLOR_GREEN = (0, 255, 0)
@@ -45,7 +45,7 @@ detection_area = np.array([[(47,265), (559,264), (636,407), (22,391)]], dtype=np
 x_shape = 640 # width of source
 y_shape = 480 # height of source
 ct = 0 #counter
-last_x, last_y = 0, 0
+
 # processing time
 startTime = 0
 endTime = 1
@@ -56,10 +56,15 @@ def findCenterPoint(x1, y1, x2, y2): # return distance in meters
     center_x, center_y = int((x1 + x2) / 2), int((y1 + y2) / 2)
     return center_x, center_y
 
-def calcEuclidean(current_x, current_y, last_x, last_y):
-    output = sqrt(abs(pow(current_x-last_x, 2) + pow(current_y-last_y, 2)))
+def calcEuclidean(center_x, center_y):
+    output = sqrt(abs(pow(center_x, 2) + pow(center_y, 2)))
     return output
 
+def findCurrentDistance(x1, y1, x2, y2):
+    center_x, center_y = findCenterPoint(x1, y1, x2, y2)
+    currentDistance = calcEuclidean(center_x, center_y)
+
+    return currentDistance#  *0.0002645833 pixels to meters
 
 
 while True:
@@ -70,7 +75,6 @@ while True:
         source_fps = cap.get(cv2.CAP_PROP_FPS)
         frame = [frame]
         result = model(frame)
-
         render_frame = np.squeeze(result.render())
         render_frame = cv2.resize(render_frame, [640, 480], interpolation = cv2.INTER_AREA)
         # detection box
@@ -82,33 +86,35 @@ while True:
             row = cord[i]
             if row[4] >= 0.5: #Confidence level
                 x1, y1, x2, y2 = int(row[0]*x_shape), int(row[1]*y_shape), int(row[2]*x_shape), int(row[3]*y_shape)
-                # find center points
                 center_x, center_y = findCenterPoint(x1, y1, x2, y2)
-                # keep as current position
-                current_x, current_y = center_x, center_y
-                print(current_x, current_y)
                 cv2.circle(render_frame, (center_x, center_y), 5, COLOR_GREEN, -1)
                 # Put all coordinates into boxes variable
+
                 boxes.append([x1, y1, x2, y2]) # current box
                 boxes_tracker = tracker.update(boxes) # automatic print to console output
+                old_boxes = boxes.copy() # last box
+                # print("START")
+                # print(boxes)
+                # print("----")
+                # print(boxes_tracker)
+                # print("END")
+                #eDist.calculate(boxes)
                 for box_tracker in boxes_tracker:
                     x1, y1, x2, y2, id = box_tracker # get coordinates each car
                     cv2.putText(render_frame, "id: " + str(id), (x1, y2 + 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, COLOR_YELLOW, 1, cv2.LINE_AA)
-
-                    # get Euclidean Distance
-                    euclideanDist = calcEuclidean(current_x, current_y, last_x, last_y)
-                    #print(euclideanDist)
-                    fps = source_fps # ref from inference time about 250 ms
-                    speed = round(
-                        ((euclideanDist*realDistance) / (fps)) * 3.6, 2) # m/s -> km/h
+                    distance = findCurrentDistance(x1, y1, x2, y2) # in meters
+                    print(distance)
+                    #diffTime = round(endTime - startTime, 3)  # in seconds
+                    #fps = 1/diffTime
+                    fps = source_fps # ref from infertence time about 250 ms
+                    speed = round(((distance - lastDistance)/fps)*3.6, 2) # *3.6 for m to km/h
                     endTime = time.time()
                     cv2.putText(
                         render_frame,
                         "speed: " + str(speed) + " km/h",
                         (x1, y2 + 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5,
                         COLOR_GREEN, 1, cv2.LINE_AA)
-                    # change these position to last position
-                    last_x, last_y = current_x, current_y
+                    lastDistance = distance
         # reset counter
         if ct >= 1000:
             ct = 0
